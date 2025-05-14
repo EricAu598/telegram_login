@@ -164,7 +164,6 @@
                photo_url, auth_date, hash
              } */
           updateDebugInfo('Telegram auth successful: ' + JSON.stringify(user));
-          
           // Store user data in localStorage
           localStorage.setItem('auth_token', JSON.stringify(user));
           updateDebugInfo('User data stored in localStorage');
