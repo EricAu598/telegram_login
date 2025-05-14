@@ -140,35 +140,7 @@
            } */
         updateDebugInfo('Telegram auth successful: ' + JSON.stringify(user));
         
-        fetch('/auth/telegram', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(user)
-        })
-        .then(r => {
-          updateDebugInfo('Server response status: ' + r.status);
-          return r.json();
-        })
-        .then(({ok, jwt}) => {
-          if (ok) {
-            updateDebugInfo('Server authentication successful, JWT received');
-            // Store JWT in localStorage or cookies
-            localStorage.setItem('auth_token', jwt);
-            updateDebugInfo('JWT stored in localStorage');
-            // Redirect to app
-            updateDebugInfo('Redirecting to /app...');
-            setTimeout(() => {
-              location.replace('/app');
-            }, 1000); // Small delay to ensure debug info is visible
-          } else {
-            updateDebugInfo('Server authentication failed');
-            alert('Authentication failed. Please try again.');
-          }
-        })
-        .catch(err => {
-          updateDebugInfo('Error during authentication: ' + err.message);
-          alert('Authentication error. Please try again.');
-        });
+     
       }
 
       // Add logout functionality
