@@ -115,40 +115,44 @@
         debugData.textContent += `\n[${timestamp}] ${message}`;
       }
 
-  function autoLoginFromUrl() {
-    const params = new URLSearchParams(window.location.search);
+  /* -------------- auto-login helper -------------- */
+  function autoLoginFromUrl () {
+    const params   = new URLSearchParams(location.search);
     const urlToken = params.get('telegramAuthToken');
-    if (!urlToken) return;                       // nothing to do
+    if (!urlToken) return;
 
-    const decoded = decodeURIComponent(urlToken);
     updateDebugInfo('Auth token found in URL, saving to localStorage');
-    localStorage.setItem('auth_token', decoded); // same key you already use
+    localStorage.setItem('auth_token', decodeURIComponent(urlToken));
 
-    // Optional: hide the token from the address bar
-    history.replaceState({}, document.title, window.location.pathname);
+    // Hide the token from the address bar
+    history.replaceState({}, document.title, location.pathname);
 
-    // Straight to your protected page
-    window.location.href = '/app';
+    // Go to the protected page (change to /app.html if that file exists)
+    location.href = '/app';
   }
+  /* ---------------------------------------------- */
 
-      // Check if user is already logged in and redirect to /app
-      document.addEventListener('DOMContentLoaded', function() {
-        updateDebugInfo('Page loaded, checking for token...');
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          updateDebugInfo('Token found, redirecting to /app...');
-          // Redirect to the protected page
-          window.location.href = '/app';
-        } else {
-          updateDebugInfo('No token found, staying on login page');
-        }
+  // Run on every load
+  document.addEventListener('DOMContentLoaded', () => {
+    autoLoginFromUrl();  // <-- 🔑 THIS WAS MISSING
 
-        // Add manual redirect button handler
-        document.getElementById('manual-redirect').addEventListener('click', function() {
-          updateDebugInfo('Manual redirect button clicked');
-          window.location.href = '/app';
-        });
+    updateDebugInfo('Page loaded, checking for token...');
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      updateDebugInfo('Token found, redirecting to /app...');
+      location.href = '/app';
+    } else {
+      updateDebugInfo('No token found, staying on login page');
+    }
+
+    // manual redirect button
+    document
+      .getElementById('manual-redirect')
+      .addEventListener('click', () => {
+        updateDebugInfo('Manual redirect button clicked');
+        location.href = '/app';
       });
+  });
       
       function onTelegramAuth(user) {
         /* user = {
