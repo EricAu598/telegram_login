@@ -1,19 +1,18 @@
 # Telegram Login Implementation
 
-This is a minimal implementation of Telegram Login for web applications. It provides both frontend and backend components for authenticating users via Telegram.
+A simple implementation of Telegram Login for web applications. This project demonstrates how to integrate the Telegram Login Widget into a web page and display the authenticated user's information.
 
 ## Features
 
 - Telegram Login Widget integration
-- Server-side verification of Telegram authentication data
-- JWT token generation for authenticated users
-- Simple protected route example
+- Client-side authentication handling
+- Display of user profile and authentication data
+- Responsive design
 
 ## Prerequisites
 
-- Node.js (v14+)
 - A Telegram bot created via [@BotFather](https://t.me/BotFather)
-- A domain configured for your bot (can be localhost for development)
+- A domain configured for your bot (can be localhost for development, or a Vercel/ngrok domain for production)
 
 ## Setup Instructions
 
@@ -26,27 +25,16 @@ This is a minimal implementation of Telegram Login for web applications. It prov
    ```
    /setdomain
    ```
-   Then enter your domain (e.g., `https://example.com` or `http://localhost:3000` for local development)
+   Then enter your domain (e.g., `https://your-project.vercel.app` or `https://xxxx-xxx-xxx-xx.ngrok-free.app`)
 
 ### 2. Configure the Application
 
-1. Clone this repository
-2. Copy `.env.example` to `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-3. Edit `.env` and add your bot token and a secure JWT secret:
-   ```
-   TELEGRAM_BOT_TOKEN=your_bot_token_here
-   JWT_SECRET=your_secure_random_string
-   ```
-
-### 3. Update the Frontend
-
 1. Open `app/public/index.html`
-2. Replace `YourBotUserName` in the script tag with your bot's username (without the @ symbol)
+2. Replace `eric_spider_bot` in the script tag with your bot's username (without the @ symbol)
 
-### 4. Install Dependencies and Run Locally
+### 3. Local Development
+
+For local development, you can use a static file server or the included Express server:
 
 ```bash
 # Install dependencies
@@ -54,36 +42,21 @@ npm install
 
 # Start the server
 npm start
-
-# For development with auto-restart
-npm run dev
 ```
 
-5. Visit `http://localhost:3000` in your browser
+Then visit `http://localhost:3000` in your browser.
 
-## Deploying to Vercel
-
-This project is configured for easy deployment to Vercel. Follow these steps to deploy:
-
-### 1. Install Vercel CLI (optional)
+For local testing, you'll need to use a service like ngrok to expose your local server to the internet:
 
 ```bash
-npm install -g vercel
+ngrok http 3000
 ```
 
-### 2. Deploy to Vercel
+Then configure your bot's domain with the ngrok URL.
 
-#### Option 1: Using Vercel CLI
+### 4. Deploying to Vercel
 
-```bash
-# Login to Vercel
-vercel login
-
-# Deploy
-vercel
-```
-
-#### Option 2: Using Vercel Dashboard
+This project is configured for easy deployment to Vercel:
 
 1. Push your code to a Git repository (GitHub, GitLab, or Bitbucket)
 2. Go to [Vercel Dashboard](https://vercel.com/dashboard)
@@ -91,18 +64,11 @@ vercel
 4. Import your repository
 5. Configure the project:
    - Framework Preset: Other
-   - Build Command: `npm run vercel-build`
-   - Output Directory: `.vercel/output/static`
+   - Build Command: (leave empty)
+   - Output Directory: (leave empty)
    - Install Command: `npm install`
-   - Development Command: `npm run dev`
 
-6. Add Environment Variables:
-   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
-   - `JWT_SECRET`: A secure random string for JWT signing
-
-7. Click "Deploy"
-
-### 3. Configure Domain with BotFather
+6. Click "Deploy"
 
 After deployment, you'll get a Vercel domain (e.g., `your-project.vercel.app`). Configure this domain with BotFather:
 
@@ -118,30 +84,14 @@ The Telegram Login Widget is embedded in the HTML page. When a user clicks the l
 
 1. Telegram shows a native approval dialog
 2. Upon approval, Telegram calls the `onTelegramAuth()` function with a signed payload
-3. The frontend sends this payload to the backend for verification
-
-### Backend
-
-The server verifies the authentication data:
-
-1. Builds a data-check string from the payload
-2. Computes an HMAC-SHA-256 signature using the bot token
-3. Compares the computed signature with the one provided by Telegram
-4. Checks that the authentication is not too old (optional)
-5. If verification passes, issues a JWT token for the user
-
-## Security Considerations
-
-- The bot token must be kept secret
-- Always verify the authentication data on the server side
-- Check that the authentication is not too old to prevent replay attacks
-- Use HTTPS in production to protect data in transit
+3. The frontend stores this payload in localStorage
+4. The user is redirected to the app page, which displays their profile and authentication data
 
 ## Customization
 
 - Modify the widget appearance by changing the data attributes in `index.html`
-- Customize the JWT payload and expiration in `server.js`
-- Add additional protected routes as needed
+- Customize the app page layout and design in `app.html`
+- Add additional functionality as needed
 
 ## References
 

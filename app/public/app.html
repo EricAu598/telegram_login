@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Telegram Login - Dashboard</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    .card {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 4px;
+      text-align: left;
+      overflow-x: auto;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .tab {
+      padding: 10px 20px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      background-color: #f1f1f1;
+      border-radius: 4px 4px 0 0;
+      margin-right: 5px;
+    }
+    .tab.active {
+      background-color: #0088cc;
+      color: white;
+      border-color: #0088cc;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .button {
+      display: inline-block;
+      background-color: #0088cc;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 4px;
+      text-decoration: none;
+      margin-top: 20px;
+      cursor: pointer;
+    }
+    .button:hover {
+      background-color: #006699;
+    }
+    .user-profile {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .user-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      margin-right: 20px;
+      background-color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      color: #666;
+    }
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .user-details {
+      text-align: left;
+    }
+    .user-name {
+      font-size: 24px;
+      font-weight: bold;
+      margin: 0;
+    }
+    .user-username {
+      color: #666;
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Authentication Successful! 🎉</h1>
+    
+    <div id="user-profile" class="user-profile">
+      <div id="user-avatar" class="user-avatar">
+        <span id="user-initials">?</span>
+      </div>
+      <div class="user-details">
+        <h2 id="user-name" class="user-name">User Name</h2>
+        <p id="user-username" class="user-username">@username</p>
+        <p id="user-id">ID: 123456789</p>
+      </div>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" onclick="showTab('user-data-tab')">User Data</div>
+      <div class="tab" onclick="showTab('raw-data-tab')">Raw Data</div>
+    </div>
+    
+    <div id="user-data-tab" class="tab-content active">
+      <h3>User Information:</h3>
+      <pre id="user-data">Loading...</pre>
+    </div>
+    
+    <div id="raw-data-tab" class="tab-content">
+      <h3>Raw Telegram Data:</h3>
+      <pre id="raw-data">Loading...</pre>
+    </div>
+    
+    <a href="index.html" class="button" id="logout">Logout</a>
+  </div>
+  
+  <script>
+    // Get and display user data
+    document.addEventListener('DOMContentLoaded', function() {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        document.body.innerHTML = `
+          <div class="card">
+            <h1>Authentication Error</h1>
+            <p>No authentication data found. Please <a href="index.html">login</a> first.</p>
+            <pre>Debug: localStorage.auth_token is ${localStorage.getItem('auth_token') || 'null'}</pre>
+          </div>
+        `;
+        return;
+      }
+      
+      try {
+        // Parse the token (which is now the raw Telegram user data)
+        const userData = JSON.parse(token);
+        
+        // Update user profile
+        if (userData.photo_url) {
+          document.getElementById('user-avatar').innerHTML = `<img src="${userData.photo_url}" alt="${userData.first_name}">`;
+        } else {
+          const initials = (userData.first_name ? userData.first_name.charAt(0) : '') + 
+                          (userData.last_name ? userData.last_name.charAt(0) : '');
+          document.getElementById('user-initials').textContent = initials || '?';
+        }
+        
+        const fullName = [userData.first_name, userData.last_name].filter(Boolean).join(' ');
+        document.getElementById('user-name').textContent = fullName || 'Unknown User';
+        
+        if (userData.username) {
+          document.getElementById('user-username').textContent = '@' + userData.username;
+        } else {
+          document.getElementById('user-username').style.display = 'none';
+        }
+        
+        document.getElementById('user-id').textContent = 'ID: ' + userData.id;
+        
+        // Format user data for display
+        const displayData = {
+          'User ID': userData.id,
+          'First Name': userData.first_name || 'N/A',
+          'Last Name': userData.last_name || 'N/A',
+          'Username': userData.username || 'N/A',
+          'Auth Date': new Date(userData.auth_date * 1000).toLocaleString(),
+        };
+        
+        document.getElementById('user-data').textContent = 
+          Object.entries(displayData)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n');
+        
+        // Display raw data
+        document.getElementById('raw-data').textContent = JSON.stringify(userData, null, 2);
+      } catch (e) {
+        document.body.innerHTML = `
+          <div class="card">
+            <h1>Error</h1>
+            <p>Failed to parse authentication data.</p>
+            <pre>Error: ${e.message}\nToken: ${token}</pre>
+            <a href="index.html" class="button">Return to Login</a>
+          </div>
+        `;
+      }
+    });
+    
+    // Tab functionality
+    function showTab(tabId) {
+      // Hide all tab contents
+      const tabContents = document.querySelectorAll('.tab-content');
+      tabContents.forEach(tab => tab.classList.remove('active'));
+      
+      // Deactivate all tabs
+      const tabs = document.querySelectorAll('.tab');
+      tabs.forEach(tab => tab.classList.remove('active'));
+      
+      // Activate the selected tab
+      document.getElementById(tabId).classList.add('active');
+      
+      // Activate the clicked tab button
+      if (tabId === 'user-data-tab') {
+        document.querySelectorAll('.tab')[0].classList.add('active');
+      } else {
+        document.querySelectorAll('.tab')[1].classList.add('active');
+      }
+    }
+    
+    // Logout functionality
+    document.getElementById('logout').addEventListener('click', (e) => {
+      e.preventDefault();
+      localStorage.removeItem('auth_token');
+      window.location.href = 'index.html';
+    });
+  </script>
+</body>
+</html>
