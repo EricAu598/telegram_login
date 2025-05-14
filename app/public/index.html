@@ -25,8 +25,6 @@
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
       background-color: #f9f9f9;
       margin-bottom: 20px;
-      width: 100%;
-      max-width: 600px;
     }
     h1 {
       color: #0088cc;
@@ -68,28 +66,35 @@
       background-color: #ffe0e0;
       border-radius: 4px;
       text-align: left;
-      width: 100%;
-    }
-    .error-message {
-      color: #d9534f;
-      background-color: #f9f2f2;
-      border: 1px solid #d9534f;
-      border-radius: 4px;
-      padding: 10px;
-      margin: 10px 0;
-      display: none;
     }
   </style>
 </head>
+<script>
+  // --- NEW: auto-login if ?telegramAuthToken= is present ---
+  (function autoLoginFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('telegramAuthToken');
+    if (!urlToken) return;                       // nothing to do
+
+    const decoded = decodeURIComponent(urlToken);
+    updateDebugInfo('Auth token found in URL, saving to localStorage');
+    localStorage.setItem('auth_token', decoded); // same key you already use
+
+    // Optional: hide the token from the address bar
+    history.replaceState({}, document.title, window.location.pathname);
+
+    // Straight to your protected page
+    window.location.href = '/app';
+  })();
+  // ----------------------------------------------------------------------
+</script>
+
 <body>
   <div class="container">
     <h1>Telegram Login Example</h1>
     
     <div class="login-container">
       <h2>Login with Telegram</h2>
-      
-      <div id="error-container" class="error-message"></div>
-      
       <!-- 
         Login button injected by Telegram
         - data-telegram-login: Your bot username (no "@")
@@ -98,28 +103,27 @@
         - data-radius: rounded corners (pixels)
         - data-request-access: let bot DM the user (write)
       -->
+      <script type="text/javascript">
+        function onTelegramAuth(user) {
+          alert('Logged in as ' + user.first_name + ' ' + user.last_name + ' (' + user.id + (user.username ? ', @' + user.username : '') + ')');
+        }
+      </script>
       <div id="login-widget">
-        <script async src="https://telegram.org/js/telegram-widget.js?21"
-                data-telegram-login="eric_spider_bot"
-                data-size="large"
-                data-userpic="false"
-                data-radius="8"
-                data-request-access="write"
-                data-onauth="onTelegramAuth">
-        </script>
+        <script async src="https://telegram.org/js/telegram-widget.js?22" data-telegram-login="eric_spider_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+        
       </div>
       
       <div id="user-info" class="user-info">
         <h3>Logged in User:</h3>
         <pre id="user-data">Not logged in</pre>
-        <a href="app.html" class="button">Go to Dashboard</a>
+        <a href="/app" class="button">Go to Dashboard</a>
         <button id="logout-button" class="button">Logout</button>
       </div>
 
       <div id="debug-info">
         <h3>Debug Information:</h3>
         <pre id="debug-data">No debug info yet</pre>
-        <button id="manual-redirect" class="button">Manually Go to Dashboard</button>
+        <button id="manual-redirect" class="button">Manually Go to /app</button>
       </div>
 
       <script>
@@ -130,22 +134,14 @@
         debugData.textContent += `\n[${timestamp}] ${message}`;
       }
 
-      // Show error message
-      function showError(message) {
-        const errorContainer = document.getElementById('error-container');
-        errorContainer.textContent = message;
-        errorContainer.style.display = 'block';
-        updateDebugInfo(`ERROR: ${message}`);
-      }
-
-      // Check if user is already logged in and redirect to app.html
+      // Check if user is already logged in and redirect to /app
       document.addEventListener('DOMContentLoaded', function() {
         updateDebugInfo('Page loaded, checking for token...');
         const token = localStorage.getItem('auth_token');
         if (token) {
-          updateDebugInfo('Token found, redirecting to app.html...');
+          updateDebugInfo('Token found, redirecting to /app...');
           // Redirect to the protected page
-          window.location.href = 'app.html';
+          window.location.href = '/app';
         } else {
           updateDebugInfo('No token found, staying on login page');
         }
@@ -153,19 +149,18 @@
         // Add manual redirect button handler
         document.getElementById('manual-redirect').addEventListener('click', function() {
           updateDebugInfo('Manual redirect button clicked');
-          window.location.href = 'app.html';
+          window.location.href = '/app';
         });
       });
       
       function onTelegramAuth(user) {
-        try {
-          /* user = {
-               id, first_name, last_name, username,
-               photo_url, auth_date, hash
-             } */
-          updateDebugInfo('Telegram auth successful: ' + JSON.stringify(user));
-          // Store user data in localStorage
-          localStorage.setItem('auth_token', JSON.stringify(user));
+        /* user = {
+             id, first_name, last_name, username,
+             photo_url, auth_date, hash
+           } */
+        updateDebugInfo('Telegram auth successful: ' + JSON.stringify(user));
+           // Store user data in localStorage
+           localStorage.setItem('auth_token', JSON.stringify(user));
           updateDebugInfo('User data stored in localStorage');
           
           // Redirect directly to app.html without server verification
@@ -173,10 +168,7 @@
           setTimeout(() => {
             window.location.href = 'app.html';
           }, 1000); // Small delay to ensure debug info is visible
-        } catch (error) {
-          updateDebugInfo('Error in onTelegramAuth: ' + error.message);
-          showError('Authentication error: ' + error.message);
-        }
+     
       }
 
       // Add logout functionality
@@ -185,7 +177,6 @@
         updateDebugInfo('Logged out, token removed from localStorage');
         document.getElementById('user-info').style.display = 'none';
         document.getElementById('login-widget').style.display = 'block';
-        document.getElementById('error-container').style.display = 'none';
       });
       </script>
     </div>
@@ -194,8 +185,9 @@
       <h3>How to set up:</h3>
       <ol>
         <li>✅ Bot username is set to <code>eric_spider_bot</code></li>
-        <li>✅ Domain configured with ngrok or Vercel</li>
+        <li>✅ Domain configured with ngrok</li>
         <li>✅ Bot token set in the .env file</li>
+        <li>✅ Server running at <code>http://localhost:3000</code></li>
       </ol>
     </div>
   </div>
