@@ -1,3 +1,4 @@
+// app/public/index.html
 <!DOCTYPE html>
 <html>
 <head>
@@ -52,13 +53,26 @@
     .button:hover {
       background-color: #006699;
     }
-    .user-info {
+    .user-info { /* This is shown after widget login, not relevant for auto-login directly */
       margin-top: 20px;
       padding: 15px;
       background-color: #f0f0f0;
       border-radius: 4px;
       text-align: left;
-      display: none;
+      display: none; 
+    }
+    #debug-info { /* Used for status messages */
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #ffe0e0; /* Default to error/debug style */
+      border-radius: 4px;
+      text-align: left;
+    }
+    #debug-info.status-info {
+      background-color: #e0f7ff; /* Lighter blue for info */
+    }
+    #debug-info.status-success {
+      background-color: #e0ffe0; /* Lighter green for success */
     }
   </style>
 </head>
@@ -67,7 +81,7 @@
     <h1>Telegram Login Example</h1>
     
     <div class="login-container">
-      <h2>Login with Telegram</h2>
+      <h2 id="login-title">Login with Telegram</h2>
       <!-- 
         Login button injected by Telegram
         - data-telegram-login: Your bot username (no "@")
@@ -76,74 +90,177 @@
         - data-radius: rounded corners (pixels)
         - data-request-access: let bot DM the user (write)
       -->
-      <div id="login-widget">
-        <script async src="https://telegram.org/js/telegram-widget.js?21"
-                data-telegram-login="eric_spider_bot"
-                data-size="large"
-                data-userpic="false"
-                data-radius="8"
-                data-request-access="write"
-                data-onauth="onTelegramAuth">
+      <div id="login-widget" style="display: none;"> <!-- Initially hidden if auto-login might occur -->
+        <script async src="https://telegram.org/js/telegram-widget.js?22" 
+                data-telegram-login="eric_spider_bot" 
+                data-size="large" 
+                data-onauth="onTelegramAuth" 
+                data-request-access="write">
         </script>
       </div>
       
-      <div id="user-info" class="user-info">
+      <div id="user-info" class="user-info"> <!-- For displaying info after manual widget login, not primary for this page -->
         <h3>Logged in User:</h3>
         <pre id="user-data">Not logged in</pre>
         <a href="/app" class="button">Go to Dashboard</a>
         <button id="logout-button" class="button">Logout</button>
       </div>
 
+      <div id="debug-info"> <!-- Will display auto-login status or debug messages -->
+        <h3>Status:</h3>
+        <pre id="debug-data">Initializing...</pre>
+        <button id="manual-redirect" class="button" style="display:none;">Manually Go to /app</button> <!-- Kept for debug, usually hidden -->
+      </div>
+
       <script>
-      // Check if user is already logged in and redirect to /app
-      document.addEventListener('DOMContentLoaded', function() {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
-          // Redirect to the protected page
-          window.location.href = '/app';
+      // Debug and status function
+      function updateStatus(message, type = 'debug') {
+        const debugData = document.getElementById('debug-data');
+        const debugPre = document.getElementById('debug-data'); // Corrected to debugPre
+        const timestamp = new Date().toISOString();
+        const fullMessage = `[${timestamp}] ${message}`;
+        
+        if (debugPre) {
+            debugPre.textContent += `\n${fullMessage}`;
+        } else {
+            console.warn("Element with id 'debug-data' not found for status update.");
         }
+        
+        if (debugData) {
+            debugData.className = ''; // Reset class
+            if (type === 'info') {
+              debugData.classList.add('status-info');
+            } else if (type === 'success') {
+              debugData.classList.add('status-success');
+            } else { // debug or error
+              debugData.classList.add('status-error'); // Assuming default #ffe0e0 is error-like
+            }
+        } else {
+             console.warn("Element with id 'debug-info' not found for class update.");
+        }
+        console.log(fullMessage); // Also log to console
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        updateStatus('Page loaded.');
+        const urlParams = new URLSearchParams(window.location.search);
+        const telegramAuthToken = urlParams.get('telegramAuthToken');
+        const loginWidgetDiv = document.getElementById('login-widget');
+        const loginTitle = document.getElementById('login-title');
+
+        if (telegramAuthToken) {
+          loginTitle.textContent = 'Attempting Auto-Login...';
+          updateStatus('TelegramAuthToken found in URL. Attempting auto-login...', 'info');
+          loginWidgetDiv.style.display = 'none';
+
+          fetch('/auth/token_login', { // Assumed NEW backend endpoint
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ token: telegramAuthToken })
+          })
+          .then(r => {
+            updateStatus(`Auto-login server response status: ${r.status}`, r.ok ? 'info' : 'error');
+            if (!r.ok) {
+              return r.json().then(err => {
+                throw new Error(err.error || `Server error ${r.status}`);
+              });
+            }
+            return r.json();
+          })
+          .then(data => { // Expects {ok: boolean, jwt?: string, error?: string}
+            if (data.ok && data.jwt) {
+              updateStatus('Auto-login successful. JWT received.', 'success');
+              localStorage.setItem('auth_token', data.jwt);
+              updateStatus('JWT stored. Redirecting to /app...', 'success');
+              // Clear the token from URL by replacing history state then redirecting
+              window.history.replaceState({}, document.title, window.location.pathname);
+              location.replace('/app');
+            } else {
+              throw new Error(data.error || 'Auto-login verification failed.');
+            }
+          })
+          .catch(err => {
+            updateStatus(`Auto-login error: ${err.message}`, 'error');
+            loginTitle.textContent = 'Auto-Login Failed';
+            // alert(`Auto-login failed: ${err.message}\nPlease use the Telegram button below.`);
+            if (loginWidgetDiv) loginWidgetDiv.style.display = 'block'; // Show widget as fallback
+          });
+        } else {
+          updateStatus('No telegramAuthToken in URL. Checking for existing session...', 'info');
+          const existingToken = localStorage.getItem('auth_token');
+          if (existingToken) {
+            updateStatus('Existing session token found. Redirecting to /app...', 'success');
+            location.replace('/app');
+          } else {
+            updateStatus('No existing session. Please login.', 'info');
+            loginTitle.textContent = 'Login with Telegram';
+            if (loginWidgetDiv) loginWidgetDiv.style.display = 'block'; // Show widget
+          }
+        }
+
+        // Manual redirect button handler (mostly for debugging)
+        document.getElementById('manual-redirect').addEventListener('click', function() {
+          updateStatus('Manual redirect button clicked', 'info');
+          window.location.href = '/app';
+        });
       });
       
+      // Handles callback from the Telegram Login Widget
       function onTelegramAuth(user) {
-        /* user = {
-             id, first_name, last_name, username,
-             photo_url, auth_date, hash
-           } */
-        console.log('Telegram auth successful:', user);
+        console.log('Telegram widget auth successful: ' + JSON.stringify(user));
+        updateStatus('Telegram widget auth successful: ' + JSON.stringify(user), 'info');
         
-        fetch('/auth/telegram', {
+        fetch('/auth/telegram', { // Existing backend endpoint for widget data
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify(user)
         })
-        .then(r => r.json())
-        .then(({ok, jwt}) => {
-          if (ok) {
-            console.log('Server authentication successful');
-            // Store JWT in localStorage or cookies
-            localStorage.setItem('auth_token', jwt);
-            // Redirect to app
+        .then(r => {
+          updateStatus(`Widget login server response status: ${r.status}`, r.ok ? 'info' : 'error');
+          if (!r.ok) {
+            return r.json().then(err => {
+              throw new Error(err.error || `Server error ${r.status}`);
+            });
+          }
+          return r.json();
+        })
+        .then(data => { // Expects {ok: boolean, jwt?: string, error?: string}
+          if (data.ok && data.jwt) {
+            updateStatus('Widget login successful. JWT received.', 'success');
+            localStorage.setItem('auth_token', data.jwt);
+            updateStatus('JWT stored. Redirecting to /app...', 'success');
             location.replace('/app');
           } else {
-            console.error('Server authentication failed');
-            alert('Authentication failed. Please try again.');
+            throw new Error(data.error || 'Widget login verification failed.');
           }
         })
         .catch(err => {
-          console.error('Error during authentication:', err);
-          alert('Authentication error. Please try again.');
+          updateStatus(`Widget login error: ${err.message}`, 'error');
+          alert(`Login failed: ${err.message}`);
         });
       }
+
+      // Add logout functionality (primarily if user ends up on this page while logged in)
+      document.getElementById('logout-button').addEventListener('click', function() {
+        localStorage.removeItem('auth_token');
+        updateStatus('Logged out, token removed.', 'info');
+        document.getElementById('user-info').style.display = 'none';
+        document.getElementById('login-widget').style.display = 'block';
+        document.getElementById('login-title').textContent = 'Login with Telegram';
+        // Redirect to root to clear any URL params and ensure clean state
+        window.location.href = '/'; 
+      });
       </script>
     </div>
     
     <div class="instructions">
       <h3>How to set up:</h3>
       <ol>
-        <li>✅ Bot username is set to <code>eric_spider_bot</code></li>
-        <li>✅ Domain configured with ngrok</li>
-        <li>✅ Bot token set in the .env file</li>
-        <li>✅ Server running at <code>http://localhost:3000</code></li>
+        <li>✅ Bot username is set to <code>eric_spider_bot</code> in the widget script.</li>
+        <li>✅ Domain configured with your hosting provider (e.g., ngrok for local, Vercel for production).</li>
+        <li>✅ Bot token and JWT_SECRET set in the server's <code>.env</code> file.</li>
+        <li>✅ Server running (e.g., at <code>http://localhost:3000</code>).</li>
+        <li>ℹ️ This page now supports auto-login via <code>telegramAuthToken</code> URL parameter. This requires a new backend endpoint <code>POST /auth/token_login</code> to validate this token and issue a session JWT.</li>
       </ol>
     </div>
   </div>

@@ -30,13 +30,21 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
+// Debug middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
+
 // Routes
 app.post('/auth/telegram', (req, res) => {
+  console.log('Received Telegram auth request:', req.body);
   const data = req.body;
   const { hash, ...fields } = data;
 
   // Validate required fields
   if (!hash || !fields.auth_date || !fields.id) {
+    console.error('Invalid auth data: missing required fields');
     return res.status(400).json({ 
       ok: false, 
       error: 'Invalid auth data: missing required fields' 
@@ -48,6 +56,7 @@ app.post('/auth/telegram', (req, res) => {
     .sort()
     .map(k => `${k}=${fields[k]}`)
     .join('\n');
+  console.log('Data check string:', dataCheckString);
 
   // 2. Compute the HMAC-SHA-256 with the bot token
   const secret = crypto
@@ -58,9 +67,12 @@ app.post('/auth/telegram', (req, res) => {
     .createHmac('sha256', secret)
     .update(dataCheckString)
     .digest('hex');
+  console.log('Computed HMAC:', hmac);
+  console.log('Received hash:', hash);
 
   // 3. Compare (constant-time)
   if (hmac !== hash) {
+    console.error('Invalid Telegram signature');
     return res.status(401).json({ 
       ok: false, 
       error: 'Invalid Telegram signature' 
@@ -70,6 +82,7 @@ app.post('/auth/telegram', (req, res) => {
   // 4. Optional extra: expire after 1 day
   const now = Math.floor(Date.now() / 1000);
   if (now - Number(fields.auth_date) > 86400) {
+    console.error('Login too old');
     return res.status(401).json({ 
       ok: false, 
       error: 'Login too old' 
@@ -97,12 +110,14 @@ app.post('/auth/telegram', (req, res) => {
 
   // Log successful authentication
   console.log(`User authenticated: ${fields.username || fields.first_name} (ID: ${fields.id})`);
+  console.log('JWT token issued:', token.substring(0, 20) + '...');
   
   return res.json({ ok: true, jwt: token });
 });
 
 // Simple protected route example
 app.get('/app', (req, res) => {
+  console.log('Accessed /app route');
   res.send(`
     <html>
       <head>
@@ -194,7 +209,7 @@ app.get('/app', (req, res) => {
           // Get and display token data
           const token = localStorage.getItem('auth_token');
           if (!token) {
-            window.location.href = '/';
+            document.body.innerHTML = '<div class="card"><h1>Authentication Error</h1><p>No authentication token found. Please <a href="/">login</a> first.</p><pre>Debug: localStorage.auth_token is ' + (localStorage.getItem('auth_token') || 'null') + '</pre></div>';
           } else {
             // Decode JWT payload (middle part between dots)
             try {
@@ -255,6 +270,7 @@ app.get('/app', (req, res) => {
 
 // Fallback route
 app.get('*', (req, res) => {
+  console.log('Accessed fallback route:', req.url);
   res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
