@@ -69,6 +69,26 @@
     }
   </style>
 </head>
+<script>
+  // --- NEW: auto-login if ?telegramAuthToken= is present ---
+  (function autoLoginFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('telegramAuthToken');
+    if (!urlToken) return;                       // nothing to do
+
+    const decoded = decodeURIComponent(urlToken);
+    updateDebugInfo('Auth token found in URL, saving to localStorage');
+    localStorage.setItem('auth_token', decoded); // same key you already use
+
+    // Optional: hide the token from the address bar
+    history.replaceState({}, document.title, window.location.pathname);
+
+    // Straight to your protected page
+    window.location.href = '/app';
+  })();
+  // ----------------------------------------------------------------------
+</script>
+
 <body>
   <div class="container">
     <h1>Telegram Login Example</h1>
@@ -139,7 +159,15 @@
              photo_url, auth_date, hash
            } */
         updateDebugInfo('Telegram auth successful: ' + JSON.stringify(user));
-        
+           // Store user data in localStorage
+           localStorage.setItem('auth_token', JSON.stringify(user));
+          updateDebugInfo('User data stored in localStorage');
+          
+          // Redirect directly to app.html without server verification
+          updateDebugInfo('Redirecting to app.html...');
+          setTimeout(() => {
+            window.location.href = 'app.html';
+          }, 1000); // Small delay to ensure debug info is visible
      
       }
 
