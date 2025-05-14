@@ -7,6 +7,8 @@
   "scripts": {
     "start": "node app/src/server.js",
     "dev": "nodemon app/src/server.js",
+    "build": "mkdir -p .vercel/output/static && cp -r app/public/* .vercel/output/static/",
+    "vercel-build": "mkdir -p .vercel/output/static && cp -r app/public/* .vercel/output/static/",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [

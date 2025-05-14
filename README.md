@@ -46,7 +46,7 @@ This is a minimal implementation of Telegram Login for web applications. It prov
 1. Open `app/public/index.html`
 2. Replace `YourBotUserName` in the script tag with your bot's username (without the @ symbol)
 
-### 4. Install Dependencies and Run
+### 4. Install Dependencies and Run Locally
 
 ```bash
 # Install dependencies
@@ -60,6 +60,55 @@ npm run dev
 ```
 
 5. Visit `http://localhost:3000` in your browser
+
+## Deploying to Vercel
+
+This project is configured for easy deployment to Vercel. Follow these steps to deploy:
+
+### 1. Install Vercel CLI (optional)
+
+```bash
+npm install -g vercel
+```
+
+### 2. Deploy to Vercel
+
+#### Option 1: Using Vercel CLI
+
+```bash
+# Login to Vercel
+vercel login
+
+# Deploy
+vercel
+```
+
+#### Option 2: Using Vercel Dashboard
+
+1. Push your code to a Git repository (GitHub, GitLab, or Bitbucket)
+2. Go to [Vercel Dashboard](https://vercel.com/dashboard)
+3. Click "New Project"
+4. Import your repository
+5. Configure the project:
+   - Framework Preset: Other
+   - Build Command: `npm run vercel-build`
+   - Output Directory: `.vercel/output/static`
+   - Install Command: `npm install`
+   - Development Command: `npm run dev`
+
+6. Add Environment Variables:
+   - `TELEGRAM_BOT_TOKEN`: Your Telegram bot token
+   - `JWT_SECRET`: A secure random string for JWT signing
+
+7. Click "Deploy"
+
+### 3. Configure Domain with BotFather
+
+After deployment, you'll get a Vercel domain (e.g., `your-project.vercel.app`). Configure this domain with BotFather:
+
+1. Talk to [@BotFather](https://t.me/BotFather) on Telegram
+2. Run `/setdomain` and select your bot
+3. Enter your Vercel domain (e.g., `https://your-project.vercel.app`)
 
 ## How It Works
 
@@ -98,3 +147,4 @@ The server verifies the authentication data:
 
 - [Telegram Login Widget Documentation](https://core.telegram.org/widgets/login)
 - [Telegram Bot API](https://core.telegram.org/bots/api)
+- [Vercel Documentation](https://vercel.com/docs)
