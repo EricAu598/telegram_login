@@ -69,25 +69,6 @@
     }
   </style>
 </head>
-<script>
-  // --- NEW: auto-login if ?telegramAuthToken= is present ---
-  (function autoLoginFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const urlToken = params.get('telegramAuthToken');
-    if (!urlToken) return;                       // nothing to do
-
-    const decoded = decodeURIComponent(urlToken);
-    updateDebugInfo('Auth token found in URL, saving to localStorage');
-    localStorage.setItem('auth_token', decoded); // same key you already use
-
-    // Optional: hide the token from the address bar
-    history.replaceState({}, document.title, window.location.pathname);
-
-    // Straight to your protected page
-    window.location.href = '/app';
-  })();
-  // ----------------------------------------------------------------------
-</script>
 
 <body>
   <div class="container">
@@ -133,6 +114,22 @@
         const timestamp = new Date().toISOString();
         debugData.textContent += `\n[${timestamp}] ${message}`;
       }
+
+  function autoLoginFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('telegramAuthToken');
+    if (!urlToken) return;                       // nothing to do
+
+    const decoded = decodeURIComponent(urlToken);
+    updateDebugInfo('Auth token found in URL, saving to localStorage');
+    localStorage.setItem('auth_token', decoded); // same key you already use
+
+    // Optional: hide the token from the address bar
+    history.replaceState({}, document.title, window.location.pathname);
+
+    // Straight to your protected page
+    window.location.href = '/app';
+  }
 
       // Check if user is already logged in and redirect to /app
       document.addEventListener('DOMContentLoaded', function() {
